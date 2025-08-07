@@ -1,7 +1,7 @@
 # YAMZ Versioning and Provenance Implementation Summary
 
 ## Overview
-This document summarizes the implementation of versioning and provenance features in YAMZ as requested by the professor. The implementation addresses both aspects mentioned:
+This document summarizes the implementation of versioning and provenance features in YAMZ as requested. The implementation addresses both aspects mentioned:
 
 1. **Term Evolution & Provenance**: Tracking every change to terms with full version history
 2. **Contextual/Temporal Grouping**: Associating terms with canonical groups for historical/contextual tracking
@@ -254,7 +254,7 @@ flask db upgrade
 
 ## Conclusion
 
-The implementation successfully addresses both aspects of the professor's requirements:
+The implementation successfully addresses both aspects of the requirements:
 
 1. **Term Evolution & Provenance**: Complete version history tracking with automatic version creation on every edit
 2. **Contextual/Temporal Grouping**: Canonical term grouping system for historical and domain-specific research
