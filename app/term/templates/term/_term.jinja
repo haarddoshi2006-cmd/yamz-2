@@ -119,6 +119,26 @@
             </table>
             </div>
             {% include 'tag/_term_tags.jinja' %}
+            <!-- Version History Section -->
+            <div class="mt-4">
+                <h5>Version History</h5>
+                {% if selected_term.versions.count() > 0 %}
+                <ul class="list-group">
+                    {% for version in selected_term.versions_desc %}
+                    <li class="list-group-item">
+                        <strong>Version {{ version.version_number }}</strong> ({{ version.created | format_date }})<br>
+                        <em>Definition:</em> {{ version.definition | process_tags_as_html }}<br>
+                        {% if version.examples %}
+                        <em>Examples:</em> {{ version.examples | convert_line_breaks | format_tags }}<br>
+                        {% endif %}
+                        <em>Tags:</em> {{ version.tags_snapshot }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>No previous versions.</p>
+                {% endif %}
+            </div>
         </div>
 
         <div class="col-md-3 fst-italic">

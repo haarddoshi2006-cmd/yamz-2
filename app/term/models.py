@@ -5,7 +5,7 @@ import re
 from app import db
 from app.user.models import User
 from blinker import Namespace
-from sqlalchemy import Index, case, select
+from sqlalchemy import Index, case, select, text
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.ext.hybrid import hybrid_property
 from markdown import markdown
@@ -80,6 +80,15 @@ term_tracked = term_signals.signal("term_tracked")
 term_voted = term_signals.signal("term_voted")
 
 
+class CanonicalTerm(db.Model):
+    __tablename__ = "canonical_terms"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(255), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    created = db.Column(db.DateTime, default=db.func.now())
+    terms = db.relationship("Term", back_populates="canonical_term")
+
+
 class Term(db.Model):
     __tablename__ = "terms"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -87,6 +96,7 @@ class Term(db.Model):
     shoulder = db.Column(db.String(64), default=SHOULDER)
     naan = db.Column(db.String(64), default=NAAN)
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    canonical_term_id = db.Column(db.Integer, db.ForeignKey("canonical_terms.id"), nullable=True)
     created = db.Column(db.DateTime, default=db.func.now())
     modified = db.Column(db.DateTime, default=db.func.now(),
                          onupdate=db.func.now())
@@ -109,7 +119,7 @@ class Term(db.Model):
     # relationships
 
     termsets = db.relationship(
-        "TermSet", secondary="term_sets", back_populates="terms", cascade="all")
+        "TermSet", secondary="term_sets", back_populates="terms")
 
     contributor = db.relationship("User", back_populates="terms")
 
@@ -140,6 +150,8 @@ class Term(db.Model):
         lazy="dynamic",
         cascade="all, delete-orphan",
     )
+
+    canonical_term = db.relationship("CanonicalTerm", back_populates="terms")
 
     @staticmethod
     def on_changed_definition(target, value, oldvalue, initiator):
@@ -350,7 +362,12 @@ class Term(db.Model):
         examples = "" if self.examples is None else self.examples
 
         string = definition + " " + examples + " " + tags
-        self.search_vector = db.func.to_tsvector("english", string.strip())
+        # Use raw SQL to update search vector reliably
+        from sqlalchemy import text
+        db.session.execute(
+            text("UPDATE terms SET search_vector = to_tsvector('english', :content) WHERE id = :term_id"),
+            {"content": string.strip(), "term_id": self.id}
+        )
         db.session.commit()
 
     def delete(self):
@@ -360,6 +377,10 @@ class Term(db.Model):
 
     def __repr__(self):
         return "<Term {} |{}>".format(self.term_string, self.concept_id)
+
+    @property
+    def versions_desc(self):
+        return self.versions.order_by(text('version_number desc'))
 
 
 class Comment(db.Model):
@@ -495,7 +516,6 @@ class TermSet(db.Model):
         back_populates="termsets",
         order_by="Term.term_string",
         single_parent=True,
-        cascade="all, delete-orphan",
     )
 
     def save(self):
@@ -505,3 +525,18 @@ class TermSet(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
+class TermVersion(db.Model):
+    __tablename__ = "term_versions"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    term_id = db.Column(db.Integer, db.ForeignKey("terms.id"), nullable=False)
+    version_number = db.Column(db.Integer, nullable=False)
+    definition = db.Column(db.Text)
+    examples = db.Column(db.Text)
+    tags_snapshot = db.Column(db.Text)
+    created = db.Column(db.DateTime, default=db.func.now())
+    modified = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
+    term = db.relationship("Term", backref=db.backref("versions", lazy="dynamic"))
+
+    def __repr__(self):
+        return f"<TermVersion {self.version_number} for Term {self.term_id}>"

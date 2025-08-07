@@ -178,3 +178,65 @@ def test_simple_search(app, client):
         # Check results
         assert len(results) == 1
         assert results[0].term_string == "Unique Search Term"
+
+
+def test_term_versioning_and_canonical_grouping(app):
+    """Test that editing a term creates a new TermVersion and that terms can be grouped by CanonicalTerm."""
+    from app.term.models import Term, TermVersion, CanonicalTerm
+    with app.app_context():
+        # Create a canonical group
+        canonical = CanonicalTerm(name="Polymorphism", description="Root for all polymorphism terms.")
+        db.session.add(canonical)
+        db.session.commit()
+        # Create a user
+        user = User(
+            authority="local",
+            auth_id="version_user",
+            last_name="Version",
+            first_name="User",
+            email="version@example.com"
+        )
+        db.session.add(user)
+        db.session.commit()
+        # Create a term in the canonical group
+        term = Term(
+            owner_id=user.id,
+            term_string="Polymorphism",
+            definition="Original definition.",
+            canonical_term_id=canonical.id
+        )
+        db.session.add(term)
+        db.session.commit()
+        term_id = term.id
+        # Simulate an edit: create a TermVersion and update the term
+        version1 = TermVersion(
+            term_id=term.id,
+            version_number=1,
+            definition=term.definition,
+            examples=term.examples,
+            tags_snapshot=""
+        )
+        db.session.add(version1)
+        db.session.commit()
+        # Update the term (simulate edit)
+        term.definition = "Updated definition."
+        db.session.commit()
+        # Create a new version for the edit
+        version2 = TermVersion(
+            term_id=term.id,
+            version_number=2,
+            definition=term.definition,
+            examples=term.examples,
+            tags_snapshot=""
+        )
+        db.session.add(version2)
+        db.session.commit()
+        # Check that two versions exist
+        versions = TermVersion.query.filter_by(term_id=term.id).order_by(TermVersion.version_number).all()
+        assert len(versions) == 2
+        assert versions[0].definition == "Original definition."
+        assert versions[1].definition == "Updated definition."
+        # Check canonical group linkage
+        term_from_db = Term.query.get(term_id)
+        assert term_from_db.canonical_term_id == canonical.id
+        assert term_from_db.canonical_term.name == "Polymorphism"

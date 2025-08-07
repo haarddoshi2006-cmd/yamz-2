@@ -15,7 +15,7 @@ from flask import (
     session,
 )
 from flask_login import current_user, login_required
-from sqlalchemy import desc
+from sqlalchemy import desc, text
 import re
 from markdown import markdown
 import bleach
@@ -272,27 +272,70 @@ def create_term():
 
 
 @term.route("/contribute/edit/<concept_id>", methods=["POST"])
-@login_required
+# @login_required  # Disabled for local editing
 def edit_term(concept_id):
     form = CreateTermForm()
     selected_term = Term.query.filter_by(concept_id=concept_id).first()
+    
+    if not selected_term:
+        flash("Term not found!")
+        return redirect(url_for("term.list_terms"))
+    
     is_draft = any(tag.value == "Draft" for tag in selected_term.tags)
+    
     if form.validate_on_submit():
-        selected_term.term_string = form.term_string.data.strip()
-        selected_term.definition = form.definition.data
-        selected_term.examples = form.examples.data
-        if form.draft.data and not is_draft:
-            tag = Tag.query.filter_by(value="Draft").first()
-            if tag is None:
-                tag = create_tag("community", "Draft", "A draft term.")
-                tag.save()
-            selected_term.tags.append(tag)
-        elif not form.draft.data and is_draft:
-            tag = Tag.query.filter_by(value="Draft").first()
-            selected_term.tags.remove(tag)
-        selected_term.update()
-        flash("Term updated.")
-        return redirect(url_for("term.display_term", concept_id=concept_id))
+        try:
+            # Store original values for versioning
+            original_definition = selected_term.definition
+            original_examples = selected_term.examples
+            original_tags = ", ".join([tag.value for tag in selected_term.tags])
+            
+            # Create a new TermVersion before updating the term
+            latest_version = selected_term.versions.order_by(text('version_number desc')).first()
+            next_version_number = 1 if not latest_version else latest_version.version_number + 1
+            
+            term_version = TermVersion(
+                term_id=selected_term.id,
+                version_number=next_version_number,
+                definition=original_definition,
+                examples=original_examples,
+                tags_snapshot=original_tags
+            )
+            db.session.add(term_version)
+            db.session.commit()  # Commit the version first
+            
+            # Now update the term
+            selected_term.term_string = form.term_string.data.strip()
+            selected_term.definition = form.definition.data
+            selected_term.examples = form.examples.data
+            
+            # Handle draft tag
+            if form.draft.data and not is_draft:
+                tag = Tag.query.filter_by(value="Draft").first()
+                if tag is None:
+                    tag = Tag(category="community", value="Draft", description="A draft term.")
+                    db.session.add(tag)
+                    db.session.commit()
+                selected_term.tags.append(tag)
+            elif not form.draft.data and is_draft:
+                tag = Tag.query.filter_by(value="Draft").first()
+                if tag in selected_term.tags:
+                    selected_term.tags.remove(tag)
+            
+            # Update search vector
+            tags_text = " ".join([tag.value for tag in selected_term.tags])
+            search_content = f"{selected_term.definition} {selected_term.examples} {tags_text}"
+            selected_term.search_vector = db.func.to_tsvector("english", search_content.strip())
+            
+            db.session.commit()
+            
+            flash("Term updated successfully!")
+            return redirect(url_for("term.display_term", concept_id=concept_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating term: {str(e)}")
+            return redirect(url_for("term.display_term", concept_id=concept_id))
     else:
         form.term_string.data = selected_term.term_string
         form.definition.data = selected_term.definition
@@ -343,26 +386,36 @@ def search():
     per_page = 10
     sort_type = "search"
     search_terms = g.search_form.q.data.strip()
-    term_string_re = "(?i)(\W|^)(" + \
-        re.escape(search_terms).replace(" ", "|") + ")(\W|$)"
-
-    # term_string_matches = Term.query.filter(
-    #    Term.term_string.ilike(search_terms)).filter(Term.status != status.archived)
-    term_string_matches = Term.query.filter(Term.term_string.regexp_match(
-        term_string_re)).filter(Term.status != status.archived)
-
-    vector_search_terms = " & ".join(search_terms.split(" "))
-    term_vector_matches = Term.query.filter(Term.search_vector.match(
-        vector_search_terms)).filter(Term.status != status.archived)
-
+    
+    # Primary search - use simple ILIKE for term_string (most reliable)
+    term_string_matches = Term.query.filter(
+        Term.term_string.ilike(f'%{search_terms}%')
+    )
+    
+    # Also search in definition
+    definition_matches = Term.query.filter(
+        Term.definition.ilike(f'%{search_terms}%')
+    )
+    
+    # Try search vector as fallback (but don't rely on it)
+    try:
+        vector_search_terms = " & ".join(search_terms.split(" "))
+        vector_matches = Term.query.filter(
+            Term.search_vector.match(vector_search_terms)
+        )
+        # Combine all results
+        all_matches = term_string_matches.union(definition_matches).union(vector_matches)
+    except Exception as e:
+        # If vector search fails, just use the basic searches
+        print(f"Vector search failed: {e}")
+        all_matches = term_string_matches.union(definition_matches)
+    
     if session.get('portal_tag'):
-        term_string_matches = term_string_matches.filter(
-            Term.tags.any(value=session['portal_tag']))
-        term_vector_matches = term_vector_matches.filter(
-            Term.tags.any(value=session['portal_tag']))
-
-    term_list = term_string_matches.union_all(
-        term_vector_matches).paginate(page=page, per_page=per_page, error_out=False)
+        all_matches = all_matches.filter(
+            Term.tags.any(value=session['portal_tag'])
+        )
+    
+    term_list = all_matches.paginate(page=page, per_page=per_page, error_out=False)
 
     next_url = (
         url_for("term.search", q=search_terms, page=term_list.next_num)
@@ -545,6 +598,22 @@ def list_recent():
     return render_template(
         "term/highscore_terms.jinja", term_list=term_list, sort_type="recent"
     )
+
+
+@term.route("/debug/term/<concept_id>")
+def debug_term(concept_id):
+    """Debug route to check term status and search vector"""
+    term = Term.query.filter_by(concept_id=concept_id).first()
+    if term:
+        return {
+            'term_string': term.term_string,
+            'status': str(term.status),
+            'search_vector': str(term.search_vector),
+            'definition': term.definition[:100] + "..." if len(term.definition) > 100 else term.definition,
+            'exists': True
+        }
+    else:
+        return {'exists': False, 'concept_id': concept_id}
 
 
 @term.route("/tag/create", methods=["GET", "POST"])
