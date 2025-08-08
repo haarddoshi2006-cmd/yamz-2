@@ -1,182 +1,633 @@
 {% if current_user.is_authenticated %}
-
 {% set my_vote = selected_term.get_user_vote(current_user) %}
 {% endif %}
 
-<div class="container">
+<div class="term-display-container fade-in-up">
+    <!-- Alternative Definitions Banner -->
     {% if not "alternate_terms" in request.endpoint %}
-    <div class="row bg-light p-2 mb-1">
-        <div class="col">
-            Alternative definitions
-            (<a href="{{ url_for('term.show_alternate_terms', term_string=selected_term.term_string) }}">{{ selected_term.alt_definitions_count }}</a>),
-            class:
-            <mark>{{ selected_term.term_class.value[1] }}</mark> ({{ selected_term.consensus }})
+    <div class="alternative-definitions-banner">
+        <div class="banner-content">
+            <i class="bi bi-collection"></i>
+            <span>Alternative definitions</span>
+            <a href="{{ url_for('term.show_alternate_terms', term_string=selected_term.term_string) }}" class="banner-link">
+                ({{ selected_term.alt_definitions_count }})
+            </a>
+            <span>class: <span class="term-class">{{ selected_term.term_class.value[1] }}</span> ({{ selected_term.consensus }})</span>
         </div>
     </div>
     {% endif %}
-    <div class="row">
-        <div class="col-md-1">
-            <div class="row">
-                <div class="col text-center p-3">
-                    {% if my_vote == 1 %}
-                    <form action="{{ url_for('term.remove_vote', concept_id=selected_term.concept_id) }}" method="post">
-                        {{ form.hidden_tag() }}
-                        <button type="submit" class="btn btn-primary btn-sm" title="remove vote">
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
-                    </form>
-                    {% else %}
-                    <form action="{{ url_for('term.vote_up', concept_id=selected_term.concept_id) }}" method="post">
-                        {{ form.hidden_tag() }}
-                        <button type="submit" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
-                    </form>
-                    {% endif %}
-                    <h4>{{ selected_term.score }}</h4>
-                    {% if my_vote == -1 %}
-                    <form action="{{ url_for('term.remove_vote', concept_id=selected_term.concept_id) }}" method="post">
-                        {{ form.hidden_tag() }}
-                        <button type="submit" class="btn btn-primary btn-sm" title="remove vote">
-                            <i class="fas fa-arrow-down"></i>
-                        </button>
-                    </form>
-                    {% else %}
-                    <form action="{{ url_for('term.vote_down', concept_id=selected_term.concept_id) }}" method="post">
-                        {{ form.hidden_tag() }}
-                        <button type="submit" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-down"></i>
-                        </button>
-                    </form>
-                    {% endif %}
+
+    <div class="term-content-grid">
+        <!-- Voting Section -->
+        <div class="voting-section">
+            <div class="vote-container">
+                {% if my_vote == 1 %}
+                <form action="{{ url_for('term.remove_vote', concept_id=selected_term.concept_id) }}" method="post">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="vote-btn vote-btn-active" title="Remove upvote">
+                        <i class="bi bi-arrow-up-circle-fill"></i>
+                    </button>
+                </form>
+                {% else %}
+                <form action="{{ url_for('term.vote_up', concept_id=selected_term.concept_id) }}" method="post">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="vote-btn" title="Upvote">
+                        <i class="bi bi-arrow-up-circle"></i>
+                    </button>
+                </form>
+                {% endif %}
+                
+                <div class="score-display">
+                    <span class="score-number">{{ selected_term.score }}</span>
+                    <span class="score-label">votes</span>
                 </div>
+                
+                {% if my_vote == -1 %}
+                <form action="{{ url_for('term.remove_vote', concept_id=selected_term.concept_id) }}" method="post">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="vote-btn vote-btn-active" title="Remove downvote">
+                        <i class="bi bi-arrow-down-circle-fill"></i>
+                    </button>
+                </form>
+                {% else %}
+                <form action="{{ url_for('term.vote_down', concept_id=selected_term.concept_id) }}" method="post">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="vote-btn" title="Downvote">
+                        <i class="bi bi-arrow-down-circle"></i>
+                    </button>
+                </form>
+                {% endif %}
             </div>
-            {% if current_user.is_authenticated %}
-            <div class="row">
-                <div class="col mt-2 text-center">
+
+            <!-- Watch/Unwatch Button -->
+            <div class="watch-section">
+                {% if current_user.is_authenticated %}
                     {% if selected_term.is_tracked_by(current_user) %}
-                    <form action="{{ url_for('term.untrack_term', concept_id=selected_term.concept_id) }}"
-                        method="post">
+                    <form action="{{ url_for('term.untrack_term', concept_id=selected_term.concept_id) }}" method="post">
                         {{ form.hidden_tag() }}
-                        {{ form.submit(value='[unwatch]', class_='btn btn-link') }}
+                        <button type="submit" class="watch-btn watch-btn-active">
+                            <i class="bi bi-eye-fill"></i>
+                            <span>Unwatch</span>
+                        </button>
                     </form>
                     {% else %}
                     <form action="{{ url_for('term.track_term', concept_id=selected_term.concept_id) }}" method="post">
                         {{ form.hidden_tag() }}
-                        {{ form.submit(value='[watch]', class_='btn btn-link') }}
+                        <button type="submit" class="watch-btn">
+                            <i class="bi bi-eye"></i>
+                            <span>Watch</span>
+                        </button>
                     </form>
                     {% endif %}
-                </div>
-            </div>
-            {% else%}
-            <div class="row">
-                <div class="col mt-2 text-center">
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-link">[watch]</a>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        <div class=" col">
-            <div class="col">
-            <table cellpadding="2">
-                <tr>
-                <td class="fst-italic">
-                    Term:
-                </td>
-                <td>
-                    <a class="fw-bold text-decoration-none" href="{{ url_for('term.display_term', concept_id=selected_term.concept_id) }}">{{ selected_term.term_string }}</a>
-                </td>
-            </tr>
-            <tr>
-                <td class="fst-italic" valign="top">
-                    Definition:
-                </td>
-                <td>
-                    {% if selected_term.definition_html %}
-                        {{ selected_term.definition_html | process_tags_as_html }}
-                    {% elif selected_term.definition %}
-                        {{ selected_term.definition | process_tags_as_html }}
-                    {% endif %}
-                </td>
-            </tr>
-
-            
-            {% if selected_term.examples %}
-            <tr>
-                <td class="fst-italic" valign="top">
-                    Examples:
-                </td>
-                <td>
-                    {% if selected_term.examples_html %}
-                        {{ selected_term.examples_html | safe }}
-                    {% else%}
-                    {{ selected_term.examples | convert_line_breaks | format_tags }}
-                    {% endif %}
-                </td>
-            </tr>
-            
-            {% endif %}
-            </table>
-            </div>
-            {% include 'tag/_term_tags.jinja' %}
-            <!-- Version History Section -->
-            <div class="mt-4">
-                <h5>Version History</h5>
-                {% if selected_term.versions.count() > 0 %}
-                <ul class="list-group">
-                    {% for version in selected_term.versions_desc %}
-                    <li class="list-group-item">
-                        <strong>Version {{ version.version_number }}</strong> ({{ version.created | format_date }})<br>
-                        <em>Definition:</em> {{ version.definition | process_tags_as_html }}<br>
-                        {% if version.examples %}
-                        <em>Examples:</em> {{ version.examples | convert_line_breaks | format_tags }}<br>
-                        {% endif %}
-                        <em>Tags:</em> {{ version.tags_snapshot }}
-                    </li>
-                    {% endfor %}
-                </ul>
                 {% else %}
-                <p>No previous versions.</p>
+                    <a href="{{ url_for('auth.login') }}" class="watch-btn">
+                        <i class="bi bi-eye"></i>
+                        <span>Watch</span>
+                    </a>
                 {% endif %}
             </div>
         </div>
 
-        <div class="col-md-3 fst-italic">
-            <div class="row">
-                <div class="col">
-                    Created {{ selected_term.created | format_date }}
+        <!-- Main Term Content -->
+        <div class="term-main-content">
+            <div class="term-details-card">
+                <div class="term-header">
+                    <h2 class="term-title">
+                        <i class="bi bi-bookmark"></i>
+                        {{ selected_term.term_string }}
+                    </h2>
+                </div>
+
+                <div class="term-body">
+                    <div class="term-section">
+                        <h3 class="section-title">
+                            <i class="bi bi-info-circle"></i>
+                            Definition
+                        </h3>
+                        <div class="section-content">
+                            {% if selected_term.definition_html %}
+                                {{ selected_term.definition_html | process_tags_as_html }}
+                            {% elif selected_term.definition %}
+                                {{ selected_term.definition | process_tags_as_html }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if selected_term.examples %}
+                    <div class="term-section">
+                        <h3 class="section-title">
+                            <i class="bi bi-lightbulb"></i>
+                            Examples
+                        </h3>
+                        <div class="section-content">
+                            {% if selected_term.examples_html %}
+                                {{ selected_term.examples_html | safe }}
+                            {% else %}
+                                {{ selected_term.examples | convert_line_breaks | format_tags }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Tags Section -->
+                    <div class="term-section">
+                        <h3 class="section-title">
+                            <i class="bi bi-tags"></i>
+                            Tags
+                        </h3>
+                        <div class="tags-container">
+                            {% include 'tag/_term_tags.jinja' %}
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col">
-                    Last Modified {{ selected_term.modified | format_date }}
+
+            <!-- Version History Section -->
+            <div class="version-history-section">
+                <h3 class="section-title">
+                    <i class="bi bi-clock-history"></i>
+                    Version History
+                </h3>
+                {% if selected_term.versions.count() > 0 %}
+                <div class="version-timeline">
+                    {% for version in selected_term.versions_desc %}
+                    <div class="version-item slide-in-right">
+                        <div class="version-header">
+                            <div class="version-info">
+                                <span class="version-number">Version {{ version.version_number }}</span>
+                                <span class="version-date">{{ version.created | format_date }}</span>
+                            </div>
+                            <div class="version-badge">
+                                <i class="bi bi-archive"></i>
+                            </div>
+                        </div>
+                        <div class="version-content">
+                            <div class="version-field">
+                                <strong>Definition:</strong>
+                                <p>{{ version.definition | process_tags_as_html }}</p>
+                            </div>
+                            {% if version.examples %}
+                            <div class="version-field">
+                                <strong>Examples:</strong>
+                                <p>{{ version.examples | convert_line_breaks | format_tags }}</p>
+                            </div>
+                            {% endif %}
+                            <div class="version-field">
+                                <strong>Tags:</strong>
+                                <span class="version-tags">{{ version.tags_snapshot }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
-            </div>
-            <div class="row">
-                <div class="col">
-                    Contributed by <span class="fst-normal">{{ selected_term.contributor.first_name }}
-                        {{ selected_term.contributor.last_name }}</span>
+                {% else %}
+                <div class="no-versions">
+                    <i class="bi bi-inbox"></i>
+                    <p>No previous versions available.</p>
                 </div>
+                {% endif %}
             </div>
-            {% if selected_term.contributor.orcid %}
-            <div class="row">
-                <div class="col">
-                    ORCID: <span class="fst-normal"><i class="fab fa-orcid">
-                            {{ selected_term.contributor.orcid }}
+        </div>
+
+        <!-- Metadata Sidebar -->
+        <div class="term-metadata">
+            <div class="metadata-card">
+                <h3 class="metadata-title">
+                    <i class="bi bi-info-circle"></i>
+                    Term Information
+                </h3>
+                
+                <div class="metadata-item">
+                    <span class="metadata-label">Created</span>
+                    <span class="metadata-value">{{ selected_term.created | format_date }}</span>
+                </div>
+                
+                <div class="metadata-item">
+                    <span class="metadata-label">Last Modified</span>
+                    <span class="metadata-value">{{ selected_term.modified | format_date }}</span>
+                </div>
+                
+                <div class="metadata-item">
+                    <span class="metadata-label">Contributor</span>
+                    <span class="metadata-value">{{ selected_term.contributor.first_name }} {{ selected_term.contributor.last_name }}</span>
+                </div>
+                
+                {% if selected_term.contributor.orcid %}
+                <div class="metadata-item">
+                    <span class="metadata-label">ORCID</span>
+                    <span class="metadata-value">
+                        <i class="bi bi-person-badge"></i>
+                        {{ selected_term.contributor.orcid }}
                     </span>
                 </div>
-            </div>
-            {% endif %}
-            <div class="row">
-                <div class="col mt-3">
-                    Permalink:
-                </div>
-            </div>
-            <div class="row">
-                <div class="col mx-2">
-                    <span class="fst-normal">{{ selected_term.persistent_id}}</span>
+                {% endif %}
+                
+                <div class="metadata-item">
+                    <span class="metadata-label">Permalink</span>
+                    <span class="metadata-value permalink">{{ selected_term.persistent_id }}</span>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+/* Term Display Specific Styles */
+.term-display-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.alternative-definitions-banner {
+    background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+}
+
+.banner-link {
+    color: white;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.term-class {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+}
+
+.term-content-grid {
+    display: grid;
+    grid-template-columns: auto 1fr 300px;
+    gap: 2rem;
+    align-items: start;
+}
+
+.voting-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.vote-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vote-btn {
+    background: none;
+    border: 2px solid var(--gray-300);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--gray-500);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.vote-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.vote-btn-active {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.score-display {
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.score-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.score-label {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.watch-section {
+    margin-top: 1rem;
+}
+
+.watch-btn {
+    background: var(--gray-100);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius-sm);
+    padding: 0.5rem 1rem;
+    color: var(--gray-600);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.watch-btn:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+}
+
+.watch-btn-active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.term-main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.term-details-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.term-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 1.5rem;
+}
+
+.term-title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.term-body {
+    padding: 2rem;
+}
+
+.term-section {
+    margin-bottom: 2rem;
+}
+
+.term-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-content {
+    color: var(--gray-700);
+    line-height: 1.7;
+    font-size: 1rem;
+}
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.version-history-section {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 2rem;
+}
+
+.version-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.version-item {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius-sm);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.version-item:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateX(4px);
+}
+
+.version-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.version-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.version-number {
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+.version-date {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+.version-badge {
+    background: var(--primary-color);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+}
+
+.version-content {
+    color: var(--gray-700);
+    line-height: 1.6;
+}
+
+.version-field {
+    margin-bottom: 1rem;
+}
+
+.version-field:last-child {
+    margin-bottom: 0;
+}
+
+.version-field strong {
+    color: var(--gray-800);
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.version-tags {
+    background: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.no-versions {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--gray-500);
+}
+
+.no-versions i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.term-metadata {
+    position: sticky;
+    top: 100px;
+}
+
+.metadata-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+}
+
+.metadata-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.metadata-item {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.metadata-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.metadata-label {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.metadata-value {
+    color: var(--gray-800);
+    font-weight: 500;
+}
+
+.permalink {
+    font-family: var(--font-family-mono);
+    font-size: 0.875rem;
+    background: var(--gray-100);
+    padding: 0.5rem;
+    border-radius: var(--border-radius-sm);
+    word-break: break-all;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .term-content-grid {
+        grid-template-columns: auto 1fr;
+    }
+    
+    .term-metadata {
+        grid-column: 1 / -1;
+        position: static;
+        margin-top: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .term-content-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .voting-section {
+        flex-direction: row;
+        justify-content: center;
+        gap: 2rem;
+    }
+    
+    .term-display-container {
+        padding: 1rem;
+    }
+    
+    .term-title {
+        font-size: 1.5rem;
+    }
+    
+    .term-body {
+        padding: 1.5rem;
+    }
+    
+    .version-history-section {
+        padding: 1.5rem;
+    }
+}
+</style>

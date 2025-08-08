@@ -1,112 +1,530 @@
 {% extends './base.jinja' %}
 
 {% block title %}
-YAMZ Metadata Dictionary
+YAMZ - Yet Another Metadata Zoo
 {% endblock %}
 
 {% block headline %}
-{% if current_user.is_authenticated %}
-
-<h6 class="text-muted" style="white-space:nowrap;">
-    A dictionary for all things metadata.
-</h6>
-
-{% endif %}
 {% endblock headline %}
 
 {% block content %}
-
-{% if not current_user.is_authenticated %}
-
-<div class="jumbotron" style="background-color: transparent; line-height: 1.8">
-    <br />
-    <h1 class="text-center display-1" style="font-weight: 500">Metadictionary</h1>
-    <br />
-    <h4 class='text-center'>A crowdsourced cross-domain vocabulary builder</h4>
-    <p class="lead text-center">
-    <br />
-    Add terms and get permalinks (<a style="text-decoration: none"
-        href="/ark:/99152/h8072">PID</a>s)<br />
-    Use and link controlled terms<br />
-    Share and refine project terms<br />
-    Cherry-pick terms for ontologies<br />
-    Dialog, test, and vote to quickly achieve consensus<br />
+<div class="hero-section">
+    <div class="hero-content">
+        <div class="hero-text">
+            <h1 class="hero-title">
+                <span class="text-gradient">YAMZ</span>
+                <span class="hero-subtitle">Yet Another Metadata Zoo</span>
+            </h1>
+            <p class="hero-description">
+                A crowdsourced cross-domain vocabulary builder for the modern research community. 
+                Create, share, and refine metadata terms with versioning and provenance tracking.
+            </p>
+            <div class="hero-actions">
+                <a href="{{ url_for('term.list_terms') }}" class="btn-modern btn-hero">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                    Browse Terms
+                </a>
+                <a href="{{ url_for('term.create_term') }}" class="btn-modern-outline btn-hero">
+                    <i class="bi bi-plus-circle"></i>
+                    Add New Term
+                </a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="hero-cards">
+                <div class="floating-card card-1">
+                    <i class="bi bi-bookmark-star"></i>
+                    <span>Metadata</span>
+                </div>
+                <div class="floating-card card-2">
+                    <i class="bi bi-diagram-3"></i>
+                    <span>Vocabulary</span>
+                </div>
+                <div class="floating-card card-3">
+                    <i class="bi bi-people"></i>
+                    <span>Community</span>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-{% endif %}
+<div class="features-section">
+    <div class="container">
+        <h2 class="section-title text-center">
+            <i class="bi bi-stars"></i>
+            Why Choose YAMZ?
+        </h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="bi bi-link-45deg"></i>
+                </div>
+                <h3>Permanent Links</h3>
+                <p>Get persistent identifiers (PIDs) for all your terms with reliable permalinks that never break.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <h3>Version History</h3>
+                <p>Track the complete evolution of terms with automatic versioning and provenance tracking.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <h3>Crowdsourced</h3>
+                <p>Build consensus through community voting and collaborative refinement of definitions.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="bi bi-diagram-2"></i>
+                </div>
+                <h3>Cross-Domain</h3>
+                <p>Connect terms across different domains and disciplines for interdisciplinary research.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="bi bi-tags"></i>
+                </div>
+                <h3>Controlled Vocabulary</h3>
+                <p>Use and link controlled terms with comprehensive tagging and categorization.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="bi bi-share"></i>
+                </div>
+                <h3>Open Sharing</h3>
+                <p>Share and refine project terms with the global research community under CC0 license.</p>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% if current_user.is_authenticated %}
-<div class="container mt-4 row marketing">
-    <table width=100%>
-        <tr>
-            <td rowspan=2 width=5%></td>
-
-            <td rowspan=2 width=75% valign=top>
-                <br />
-                <h4>Notifications</h4>
-                <div id="notifications">
-                    <!-- this panel will be populated by javascript -->
+<div class="dashboard-section">
+    <div class="container">
+        <h2 class="section-title">
+            <i class="bi bi-speedometer2"></i>
+            Your Dashboard
+        </h2>
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <div class="dashboard-header">
+                    <h3><i class="bi bi-bell"></i> Notifications</h3>
                 </div>
-            </td>
+                <div class="dashboard-content">
+                    <div id="notifications" class="notification-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-card">
+                <div class="dashboard-header">
+                    <h3><i class="bi bi-person-circle"></i> My Terms</h3>
+                </div>
+                <div class="dashboard-content">
+                    {% if my_terms %}
+                    <div class="term-list">
+                        {% for term in my_terms %}
+                        <a href="{{ url_for('term.display_term', concept_id=term.concept_id) }}" class="term-link">
+                            <i class="bi bi-bookmark"></i>
+                            {{ term.term_string }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-plus-circle"></i>
+                        <p>You haven't contributed any terms yet.</p>
+                        <a href="{{ url_for('term.create_term') }}" class="btn-modern-outline">Add Your First Term</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="dashboard-card">
+                <div class="dashboard-header">
+                    <h3><i class="bi bi-eye"></i> Watching</h3>
+                </div>
+                <div class="dashboard-content">
+                    {% if tracked_terms %}
+                    <div class="term-list">
+                        {% for track in tracked_terms %}
+                        <a href="{{ url_for('term.display_term', concept_id=track.term.concept_id) }}" class="term-link">
+                            <i class="bi bi-eye"></i>
+                            {{ track.term.term_string }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-eye"></i>
+                        <p>You aren't tracking any terms.</p>
+                        <a href="{{ url_for('term.list_terms') }}" class="btn-modern-outline">Browse Terms</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
-            <td valign=top>
-                <br />
-                <h4>My terms</h4>
-                {% if my_terms %}
-                {% for term in my_terms %}
-                <a href="{{ url_for('term.display_term', concept_id=term.concept_id) }}">{{ term.term_string }}</a>
-                <br />
-                {% endfor %}
-                {% else %}
-                <font color="#B8B8B8"><i>You haven't contributed any terms.</i></font>
-                {% endif %}
-                <br>
-            </td>
-        <tr>
-            <td valign=top>
-                <hr>
-                <h4>Watching</h4>
-                {% if tracked_terms %}
-                {% for track in tracked_terms %}
-                <a
-                    href="{{ url_for('term.display_term', concept_id=track.term.concept_id) }}">{{ track.term.term_string }}</a>{{ ", " if not loop.last else "" }}
-                {% endfor %}
-                {% else %}
-                <font color="#B8B8B8"><i>You aren't tracking any terms.</i></font>
-                {% endif %}
-                <br /><br />
-            </td>
-        </tr>
-    </table>
-    {% endif %}
+<style>
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 4rem 0;
+    margin: -2rem -1rem 3rem -1rem;
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+    position: relative;
+    overflow: hidden;
+}
 
-    {% endblock content %}
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+}
 
-    {% block body_scripts%}
-    {{ super() }}
-    {% if current_user.is_authenticated %}
-    <script type="text/javascript">
-        $(document).ready(function () {
-            $.getJSON({
-                url: "{{ url_for('notify.notifications') }}",
-                success: function (notification_data) {
-                    item_count = notification_data.length;
-                    if (item_count > 0) {
-                        for (var i = 0; i < item_count; i++) {
-                            $("#notifications").append(
-                                "<a href='/term/ark/" + notification_data[i].data.term_concept_id + "'>" +
-                                notification_data[i].data.term_string +
-                                "</a> <i>" + notification_data[i].name + "</i> " +
-                                "<a href='/notify/notifications/delete/" + notification_data[i].id + "'><small>[delete]</small></a><br />"
-                            );
-                        }
-                    } else {
-                        $("#notifications").html(
-                            "<font color='#B8B8B8'><i>No new notifications.</i></font>");
+.hero-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.hero-title {
+    font-size: 4rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.1;
+}
+
+.hero-subtitle {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 400;
+    opacity: 0.9;
+    margin-top: 0.5rem;
+}
+
+.hero-description {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    opacity: 0.95;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-hero {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.hero-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-cards {
+    position: relative;
+    width: 300px;
+    height: 300px;
+}
+
+.floating-card {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    font-weight: 600;
+    animation: float 6s ease-in-out infinite;
+}
+
+.floating-card i {
+    font-size: 2rem;
+}
+
+.card-1 {
+    top: 0;
+    left: 0;
+    animation-delay: 0s;
+}
+
+.card-2 {
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    animation-delay: 2s;
+}
+
+.card-3 {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    animation-delay: 4s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+/* Features Section */
+.features-section {
+    padding: 4rem 0;
+    background: var(--gray-50);
+    margin: 0 -1rem;
+}
+
+.section-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.feature-card {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid var(--gray-200);
+}
+
+.feature-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-xl);
+}
+
+.feature-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    color: white;
+    font-size: 2rem;
+}
+
+.feature-card h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 1rem;
+}
+
+.feature-card p {
+    color: var(--gray-600);
+    line-height: 1.6;
+}
+
+/* Dashboard Section */
+.dashboard-section {
+    padding: 4rem 0;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 1.5rem;
+}
+
+.dashboard-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dashboard-content {
+    padding: 1.5rem;
+}
+
+.notification-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.notification-list a {
+    color: var(--primary-color);
+    text-decoration: none;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-sm);
+    transition: all 0.3s ease;
+}
+
+.notification-list a:hover {
+    background: var(--gray-50);
+    text-decoration: none;
+}
+
+.term-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.term-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    padding: 0.75rem;
+    border-radius: var(--border-radius-sm);
+    transition: all 0.3s ease;
+    border: 1px solid var(--gray-200);
+}
+
+.term-link:hover {
+    background: var(--gray-50);
+    border-color: var(--primary-color);
+    text-decoration: none;
+    transform: translateX(4px);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 2rem;
+    }
+    
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .hero-actions {
+        justify-content: center;
+    }
+    
+    .hero-cards {
+        width: 250px;
+        height: 250px;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-title {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock content %}
+
+{% block body_scripts%}
+{{ super() }}
+{% if current_user.is_authenticated %}
+<script type="text/javascript">
+    $(document).ready(function () {
+        $.getJSON({
+            url: "{{ url_for('notify.notifications') }}",
+            success: function (notification_data) {
+                item_count = notification_data.length;
+                if (item_count > 0) {
+                    for (var i = 0; i < item_count; i++) {
+                        $("#notifications").append(
+                            "<a href='/term/ark/" + notification_data[i].data.term_concept_id + "'>" +
+                            "<i class='bi bi-bell'></i> " +
+                            notification_data[i].data.term_string +
+                            " <small>" + notification_data[i].name + "</small>" +
+                            "</a>"
+                        );
                     }
+                } else {
+                    $("#notifications").html(
+                        "<div class='empty-state'><i class='bi bi-check-circle'></i><p>No new notifications.</p></div>");
                 }
-            });
+            }
         });
-    </script>
-    {% endif %}
-    {% endblock body_scripts %}
+    });
+</script>
+{% endif %}
+{% endblock body_scripts %}
