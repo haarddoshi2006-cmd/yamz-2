@@ -1,8 +1,10 @@
-from flask import Flask
-app = Flask(__name__)
-from config import Config
-app.config.from_object(Config)
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))  # ensures top-level folder is in path
 
-# Import your routes or logic from yamz.py if needed
-# from yamz import some_blueprint_or_routes
+from config import Config
+from flask import Flask
+
+app = Flask(__name__)
+app.config.from_object(Config)
 
